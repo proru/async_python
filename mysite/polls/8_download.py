@@ -9,15 +9,16 @@ def get_file(url):
 
 def write_file(response):
     filename = response.url.split('/')[-1]
-    with open(filename, 'wh') as file:
+    filename = "../assets/new file " + str(time()) + ".jpeg"
+    with open(filename, 'wb') as file:
         file.write(response.content)
 
 
 def main():
     t0 = time()
 
-    url = 'https://loremflickercom/320/240'
-    for i in range(10):
+    url = 'https://www.fillmurray.com/640/360'
+    for i in range(100):
         write_file(get_file(url))
 
     print(time() - t0)
