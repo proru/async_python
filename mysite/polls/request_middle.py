@@ -4,6 +4,7 @@ from requests_middleware import MiddlewareHTTPAdapter
 from requests_middleware.contrib.httpcacheware import CacheMiddleware
 from requests_middleware.contrib.throttleware import \
     ThrottleMiddleware, RequestsPerHourThrottler
+from abc import ABC, abstractmethod
 
 session = requests.Session()
 middlewares = [
@@ -23,7 +24,17 @@ headers = {
 req = Request('GET', url, headers=headers)
 prepped = req.prepare()
 
+
+
+
+
+
+
+
+
 # do something with prepped.body
+
+
 # prepped.body = 'No, I want exactly this as the body.'
 
 # do something with prepped.headers
