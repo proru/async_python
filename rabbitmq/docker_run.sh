@@ -1,6 +1,6 @@
 #!/bin/sh
 
-name_container="rabbit_dooker"
+name_container="rabbit_docker"
 name_image="rabbitmq"
 function build {
     docker build --no-cache -t $name_image $@ .
@@ -10,8 +10,7 @@ function build {
 function up {
     docker run $@ \
         --name $name_container \
-        -v $(pwd)/my_python:/app/my_python \
-        -p 9000:5432 \
+        -p 9010:5432 \
         -d $name_image
 
 }
@@ -20,13 +19,15 @@ function down {
     docker rm -f -v $name_container
 }
 function rebuild {
+    docker stop $name_container
     docker rm -f -v $name_container
-    docker rmi -f $name_image
-    docker build --no-cache -t $name_image:latest $@ .
     docker run $@ \
         --name $name_container \
-        -p 9000:5432 \
+        -p 9010:5672 \
         -d $name_image
+
+#    docker rmi -f $name_image
+#    docker build --no-cache -t $name_image:latest $@ .
 }
 function log {
     docker logs $name_container $@
