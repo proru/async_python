@@ -850,11 +850,13 @@ from rcnt
 where len(cnt) > 2
   and (cast(cnt as int) % 2 = 0 or cast(cnt as int) < 256);
 
+USE [sql-ex];
 
-with res as (
-    select maker, model
-    from product
-    where model not LIKE '%[^1-9]%'),
+
+with res as (select maker, model
+            from Product
+            where model not LIKE '%[^0-9]%'
+              and NOT (model not LIKE '%[^0]%' and model LIKE '0%')) ,
      rend as (
          select maker,
                 string_agg(cast(cast(model as int) as varchar), '') within group ( order by cast(model as int) ) as ssum
@@ -867,6 +869,8 @@ with res as (
      rcnt as (
          select maker, substring(ssum, (num - 1) * 3 + 1, 3) as cnt
          from rnew)
+
+select * from res;
 select maker, cnt
 from (
          select maker, substring(ssum, (num - 1) * 3 + 1, 3) as cnt
@@ -887,6 +891,43 @@ where len(cnt) =3 and (cast(cnt as int) %2 = 0 or cast(cnt as int) < 256 );
 
 
 
+with res as (select maker, model
+            from Product
+            where model not LIKE '%[^0-9]%'
+              and NOT (model not LIKE '%[^0]%' and model LIKE '0%')) ,
+     rend as (
+         select maker,
+                string_agg(cast(cast(model as int) as varchar), '') within group ( order by cast(model as int) ) as ssum
+         from res
+         group by maker),
+     rnew as (
+         select row_number() over (partition by maker, ssum order by value) num, maker, ssum, value
+         from rend
+                  cross apply string_split(replicate('1 1', len(ssum) / 3), ' ')),
+     rcnt as (
+         select maker, substring(ssum, (num - 1) * 3 + 1, 3) as cnt
+         from rnew)
+
+select * from res;
+select maker, cnt
+from (
+         select maker, substring(ssum, (num - 1) * 3 + 1, 3) as cnt
+         from (
+                  select row_number() over (partition by maker, ssum order by value) num, maker, ssum, value
+                  from (
+                           select maker,
+                                  string_agg(model, '')
+                                             within group ( order by cast(model as int) ) as ssum
+                           from (
+                               select maker, model from Product
+                                    except
+                                    select maker, model
+                                    from Product
+                                    where model LIKE '%[^0-9]%'
+                                      or (model not LIKE '%[^0]%' and model LIKE '%0')) as res
+                           group by maker) as rend
+                           cross apply string_split(replicate('1 1', len(ssum)), ' ')) as rnew) as rcnt
+where len(cnt) =3 and (cast(cnt as int) %2 = 0 or cast(cnt as int) < 256 );
 
 
 
