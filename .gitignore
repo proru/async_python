@@ -1,7 +1,8 @@
 /rest_venv/
 /venv/
 .idea/*
-
+.idea
+.idea/
 */venv/
 */env/
 *.log
