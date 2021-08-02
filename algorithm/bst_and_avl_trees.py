@@ -8,6 +8,7 @@ def log_func(func):
         return val
     return wrapper
 
+
 class BinaryNode:
 
     def __init__(self, value = None):
