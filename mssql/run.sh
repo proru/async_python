@@ -1,6 +1,6 @@
 #!/bin/sh
 
-name_container=sql_server
+name_container=sql_server_new
 function build {
     docker build --no-cache -t $name_container $@ .
 }
@@ -23,7 +23,7 @@ function rebuild {
    docker run -e 'ACCEPT_EULA=Y' \
    -e 'SA_PASSWORD=Post11234' \
    --name $name_container \
-    -p 1433:1433  \
+    -p 1434:1433  \
     -d mcr.microsoft.com/mssql/server:2019-latest
 }
 function log {
