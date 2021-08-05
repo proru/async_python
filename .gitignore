@@ -1,10 +1,12 @@
 /rest_venv/
-/venv/
+/.venv/
 .idea/*
 .idea
 .idea/
-*/venv/
+*/.venv/
 */env/
+.venv/*
+.venv
 *.log
 *.pot
 *.pyc
