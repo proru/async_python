@@ -1,5 +1,6 @@
 
-
+def to_jaden_case(string):
+    return " ".join([item.capitalize() for item in string.split()])
 
 def alphabet_position(text):
     # text = map(ord, text.encode("cp1252"))
@@ -11,4 +12,5 @@ def alphabet_position(text):
 
 if __name__=="__main__":
     text = " at twelve o' clock."
-    print(alphabet_position(text))
+    # print(alphabet_position(text))
+    print(to_jaden_case("kjas ldkfj asdf"))
