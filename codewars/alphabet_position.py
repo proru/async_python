@@ -10,7 +10,25 @@ def alphabet_position(text):
     return text
 
 
+class Request:
+    kwargs = {"id":"1"}
+
+    def __init__(self, kwargs):
+        self.kwargs = kwargs
+
 if __name__=="__main__":
-    text = " at twelve o' clock."
-    # print(alphabet_position(text))
-    print(to_jaden_case("kjas ldkfj asdf"))
+    # text = " at twelve o' clock."
+    # # print(alphabet_position(text))
+    # print(to_jaden_case("kjas ldkfj asdf"))
+    data = {"id": "2"}
+    request = Request({"id": "3"})
+    pk =1
+    # data['id'] = 1
+    is_yourself = (request.kwargs.get('pk') and (int(request.kwargs.get('pk')) == pk)
+                   or (data.get('id') and int(data.get('id')) == pk))
+    # is_yourself = pk in [data.get('id'), request.kwargs.get('id')]
+    # is_yourself = pk in [data.get('id'), request.kwargs.get('id')]
+
+    print(is_yourself)
+
+
