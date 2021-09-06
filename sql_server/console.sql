@@ -889,7 +889,7 @@ from (
                            cross apply string_split(replicate('1 1', len(ssum)), ' ')) as rnew) as rcnt
 where len(cnt) =3 and (cast(cnt as int) %2 = 0 or cast(cnt as int) < 256 );
 
-
+use [sql-ex];
 
 with res as (select maker, model
             from Product
@@ -930,7 +930,8 @@ from (
 where len(cnt) =3 and (cast(cnt as int) %2 = 0 or cast(cnt as int) < 256 );
 
 
-
+use [sql-ex];
+select * from Product;
 
 
 
