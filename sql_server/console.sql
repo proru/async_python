@@ -930,10 +930,289 @@ from (
 where len(cnt) =3 and (cast(cnt as int) %2 = 0 or cast(cnt as int) < 256 );
 
 
+
+
+
+
+
+
+
+
+
 use [sql-ex];
 select * from Product;
 
+with res as (
+    select maker, model, replicate('0',(50-len(model))) + model as sort_model
+    from Product
+    where model not LIKE '%[^0-9]%'
+      and (model LIKE '%[^0]%')),
+     res_union as (
+         select maker, string_agg(model, '') within group ( order by sort_model ) as model
+         from res
+         group by maker),
+     res_split as (
+         select maker, model
+         from res_union
+                  cross apply string_split(REPLICATE('1 1', len(model)), ' ')),
+     res_row as (
+select row_number() over (partition by maker order by model ) num, maker, model
+from res_split ),
+     res_sub as (
+select maker, model, substring(model,(num-1)*3+1,3) as triplet from res_row),
+     res_trip as (
+select maker, triplet from res_sub where len(triplet) = 3 and (cast(triplet as int) < 256 or cast(triplet as int )%2 = 0))
+select * from res_union;
+select Prod.maker, coalesce(triplet,'') as triplet from (select distinct maker from Product) as prod left join res_trip on res_trip.maker = Prod.maker
 
+
+
+
+
+select maker, triplet
+from (
+         select maker, model, substring(model COLLATE Latin1_General_CS_AI_KS_WS, (num - 1) * 3 + 1, 3) as triplet
+         from (
+                  select row_number() over (partition by maker order by model COLLATE Latin1_General_CS_AI_KS_WS) num, maker, model
+                  from (
+                           select maker, model COLLATE Latin1_General_CS_AI_KS_WS as model
+                           from (
+                                    select maker,
+                                           string_agg(model , '') within group ( order by cast(model as int) ) as model
+                                    from (
+                                             select maker, model COLLATE Latin1_General_CS_AS as model
+                                             from Product
+                                             where model COLLATE Latin1_General_CS_AI_KS_WS not LIKE N'%[^0-9]%'
+                                               and (model COLLATE Latin1_General_CS_AI_KS_WS LIKE N'%[^0]%')) as res
+                                    group by maker ) as res_union
+                                    cross apply string_split(REPLICATE('1 1', len(model)), ' ')) as res_split) as res_row) as res_sub
+where len(triplet) = 3
+  and (cast(triplet as int) < 256 or cast(triplet as int) % 2 = 0);
+
+
+
+select maker, triplet
+from (
+         select maker, model, substring(model, (num - 1) * 3 + 1, 3) as triplet
+         from (
+                  select row_number() over (partition by maker order by model) num, maker, model
+                  from (
+                           select maker, model
+                           from (
+                                    select maker,
+                                           string_agg(model, '') within group (order by sort_model) as model
+                                    from (
+                                             select maker, model, replicate('0',(50-len(model))) + model as sort_model
+                                             from product
+                                             where model not LIKE N'%[^0-9]%'
+                                               and (model LIKE N'%[^0]%')) as res
+                                    group by maker) as res_union
+                                    cross apply string_split(REPLICATE('1 1', len(model)), ' ')) as res_split) as res_row) as res_sub
+where len(triplet) = 3
+  and (cast(triplet as int) < 256 or cast(triplet as int) % 2 = 0);
+
+
+
+select maker, triplet
+from (
+         select maker, model, substring(model, (num - 1) * 3 + 1, 3) as triplet
+         from (
+                  select row_number() over (partition by maker order by model ) num, maker, model
+                  from (
+                           select maker, model
+                           from (
+                                    select maker,
+                                           string_agg(model, '') within group ( order by model  collate Latin1_General_100_BIN2) as model
+                                    from (
+                                             select maker, model
+                                             from Product
+                                             where model not LIKE N'%[^0-9]%'
+                                               and (model LIKE N'%[^0]%')) as res
+                                    group by maker) as res_union
+                                    cross apply string_split(REPLICATE('1 1', len(model)), ' ')) as res_split) as res_row) as res_sub
+where len(triplet) = 3
+  and (cast(triplet as int) < 256 or cast(triplet as int) % 2 = 0);
+
+
+-- select maker, cast(model as bigint) from Product;
+
+with res as (
+    select row_number() over (partition by B_Q_ID, B_V_ID order by B_DATETIME) num,
+           B_DATETIME as                                                       date,
+           B_Q_ID     as                                                       qid,
+           B_V_ID     as                                                       vid,
+           B_VOL      as                                                       vol
+    from utB
+    ),
+     res_left as (
+         select res.date, res.qid, res.vid, res.vol, res_left.date as tp, res_left.vol as volp
+         from res
+                  left join res as res_left
+                            on res_left.qid = res.qid and res_left.vid = res.vid and res.num = res_left.num + 1),
+     res_agg as (
+         select res.date,
+                res.qid,
+                res.vid,
+                string_agg(FORMAT(coalesce(res_left.date, 'NULL'), N'yyyy-MM-dd hh:mm:ss'), ',') within group ( order by res_left.date DESC) as times
+         from res
+                  left join res as res_left
+                            on res_left.qid = res.qid and res_left.vid = res.vid and res.date > res_left.date
+         group by res.qid, res.vid, res.date)
+select res_left.date, res_left.qid, res_left.vid, res_left.vol, res_left.tp, res_left.volp, times
+from res_left
+         left join res_agg on res_agg.qid = res_left.qid and res_agg.vid = res_left.vid and res_agg.date = res_left.date;
+
+
+
+with res as (
+    select row_number() over (partition by B_Q_ID, B_V_ID order by B_DATETIME) num,
+           B_DATETIME as                                                       date,
+           B_Q_ID     as                                                       qid,
+           B_V_ID     as                                                       vid,
+           B_VOL      as                                                       vol
+    from utB
+),
+     res_left as (
+         select num,
+                date,
+                qid,
+                vid,
+                vol,
+                LAG(date) OVER (partition by qid,vid ORDER BY num) tp,
+                LAG(vol) OVER (partition by qid,vid ORDER BY num)  volp
+         from res),
+     res_agg as (
+         select res.date,
+                res.qid,
+                res.vid,
+                string_agg(CONVERT(NVARCHAR(MAX), res_left.date, 20), ',')
+                           within group ( order by res_left.date DESC) as times
+         from res
+                  left join res as res_left
+                            on res_left.qid = res.qid and res_left.vid = res.vid and res.date > res_left.date
+         group by res.qid, res.vid, res.date)
+select res_left.date, res_left.qid, res_left.vid, res_left.vol, res_left.tp, res_left.volp, times
+from res_left
+         left join res_agg
+                   on res_agg.qid = res_left.qid and res_agg.vid = res_left.vid and res_agg.date = res_left.date;
+
+
+
+with res as (
+    select row_number() over (partition by B_Q_ID, B_V_ID order by B_DATETIME) num,
+           B_DATETIME as                                                       date,
+           B_Q_ID     as                                                       qid,
+           B_V_ID     as                                                       vid,
+           B_VOL      as                                                       vol
+    from utB
+),
+     res_left as (
+         select num,
+                date,
+                qid,
+                vid,
+                vol,
+                LAG(date) OVER (partition by qid,vid ORDER BY num) tp,
+                LAG(vol) OVER (partition by qid,vid ORDER BY num)  volp
+         from res),
+     res_agg as (
+         select res.date,
+                res.qid,
+                res.vid,
+
+                string_agg(FORMAT(res_left.date, N'yyyy-MM-dd hh:mm:ss'), ',')
+                           within group ( order by res_left.date DESC) as times
+         from res cross apply res as res_left
+         group by res.qid, res.vid, res.date),
+     res_res as (
+         select res_agg.date,
+                res_agg.qid,
+                res_agg.vid,
+                string_agg(res_left.times, ',')
+                           within group ( order by res_left.times DESC) as times
+         from res_agg cross apply res_agg as res_left
+         group by res_agg.qid, res_agg.vid, res_agg.date)
+select * from res_res;
+
+
+string_agg(cast(cast(res_left.date as smalldatetime) as NVARCHAR(MAX)), ',')
+-- CONVERT(NVARCHAR(max),FORMAT(res_left.date, 'yyyy-MM-dd hh:mm:ss')), ',')
+
+
+-- Задача 58
+-- Беглый заключенный, оказавшись в аэропорту города town_from, улетел ближайшим рейсом.
+-- Для каждого города town_from в Trip рассчитать вероятность того, что беглец окажется в городе town_to.
+--     Если в одно время из аэропорта вылетают несколько рейсов, считать возможность выбора заключенным каждого из этих рейсов равновероятной.
+-- Вывод: town_from, town_to, вероятность в процентах (число с точностью до тысячных долей).
+
+
+--
+-- select count(*) over (partition by town_from, town_to) num , town_from, town_to,
+--        count(*) over ( partition by town_from) general from res_date )
+-- select distinct town_from, town_to, round(cast(num as real)/cast(general as real ) * 100.0, 3) as res from res_count
+
+
+-- 1. Проверьте точность своего вычисления на таком наборе: одновременно вылетают 3 рейса в город А и еще 5 рейсов в город Б.
+-- Предыдущий рейс в город В вылетел за час до них.
+-- 2. Форматирование числа как строки может приводить к неверному отображению чисел меньше единицы.
+-- 3. Для расчёта вероятности важно понимать, что заключённый может оказаться в аэропорту города town_from в произвольный момент времени.
+
+with res as (
+    select town_from,
+           town_to,
+           datetimefromparts(datepart(year, date), datepart(month, date), datepart(day, date),
+                             datepart(hour, time_out), datepart(mi, time_out), 0, 0) as date_out
+    from trip
+             inner join (select datefromparts(2000, 1, 1) as date) as new on date is not null),
+     res_dis as (select distinct town_from,
+                                 date_out,
+                                 min(date_out) over ( partition by town_from order by date_out) as min_date
+                 from res),
+     res_new as (select town_from, date_out, min_date
+                 from res_dis
+                 union
+                 select town_from, dateadd(day, 1, min_date) as date_out, min_date
+                 from res_dis),
+
+     res_lag as (
+         select distinct town_from,
+                         date_out,
+                         min_date,
+                         LAG(date_out) OVER (partition by town_from ORDER BY date_out) prev_date
+         from res_new),
+     res_count as (
+         select town_from,
+                datediff(mi, prev_date, date_out) as res,
+                case
+                    when datediff(day, min_date, date_out) = 1
+                        then min_date
+                    else date_out end             as date_out
+         from res_lag
+         where prev_date is not null),
+     res_date as (
+         select res.town_from,
+                res.town_to,
+                res.date_out,
+                res_count.res,
+                count(*) over ( partition by res.town_from, res.date_out) num
+         from res
+                  inner join res_count on res_count.town_from = res.town_from and res.date_out = res_count.date_out),
+     res_sum as (
+         select town_from, town_to, sum(cast(res as real) / cast(num as real) * 100.0 / 1440.0) as part
+         from res_date
+         group by town_from, town_to)
+select town_from, town_to, case when cast(round(part,4)*10000 as int) % 10 = 5 then cast(round(part + 0.0001,3) as dec(6, 3)) else
+cast(round(part,3) as dec(6, 3)) end as part
+from res_sum;
+
+-- round(CAST(AS dec(6,3)),3)
+-- cast(round(part,3) as dec(6, 3))
+-- 1, datetimefromparts(2000, 1, 1,0,0,0,0)
+--
+
+
+select * from Pass_in_trip;
+select * from Passenger;
 
 
 

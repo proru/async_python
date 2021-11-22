@@ -1,6 +1,6 @@
 #!/bin/sh
 
-name_container=sql_server_new
+name_container=mypost
 function build {
     docker build --no-cache -t $name_container $@ .
 }
@@ -8,9 +8,8 @@ function build {
 #        -v $(pwd)/my_python:/app/my_python \
 function up {
     docker run $@ \
-        --name $name_container \
-        -v $(pwd)/my_python:/app/my_python \
-        -p 9000:5432 \
+        --name mypost2 \
+        -p 5433:5432 \
         -d $name_container
 
 }
