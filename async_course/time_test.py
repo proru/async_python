@@ -1,6 +1,7 @@
 import datetime
 import time
 
+
 def counting_str(temp):
     sum = 0
     for idx, item in enumerate(temp):
@@ -11,9 +12,6 @@ def counting_str(temp):
 
 
 if __name__ == '__main__':
-    value = '9,56'
-    try:
-        print(float(value))
-    except ValueError as e:
-        print(float(value.replace(',', '.')))
+    import requests
+    response = requests.post('http://127.0.0.1:8000/')
     print('hello')
