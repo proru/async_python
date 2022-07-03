@@ -1,70 +1,105 @@
+import time
+import contextlib
+import errno
+import os
+import signal
+import datetime
+
+from threading import Thread
 
 
-def func():
-    import base64
-    import json
+class TimeoutProcessingError(Exception):
+    def __init__(self, limit, message="timeout of proccesing messages"):
+        self.time_limit = limit
+        self.message = message
+        super().__init__(self.message)
 
-    import requests
 
-    api = 'http://127.0.0.1:8000/api/carriages/'
-    image_file = 'photo_2021-12-03_12-57-48.thumbnail.jpg'
+class TimeoutSignaller(Thread):
+    def __init__(self, limit, handler):
+        Thread.__init__(self)
+        self.limit = limit
+        self.running = True
+        self.handler = handler
+        assert callable(handler), "Timeout Handler needs to be a method"
 
-    with open(image_file, "rb") as f:
-        im_bytes = f.read()
-    im_b64 = base64.b64encode(im_bytes).decode("utf8")
+    def run(self):
+        timeout_limit = datetime.datetime.now() + datetime.timedelta(seconds=self.limit)
+        while self.running:
+            if datetime.datetime.now() >= timeout_limit:
+                self.handler()
+                self.stop_run()
+                break
 
-    headers = {'Content-type': 'application/json'}
+    def stop_run(self):
+        self.running = False
 
-    payload = json.dumps({"cargo_weight": "1",
-                          "carriage_number": "1",
-                          "carriage_type": "1",
-                          "carriage_photo": im_b64,
-                          "quality_control": 23,
-                          "train": 1,
-                          })
-    response = requests.post(api, data=payload, headers=headers)
-    try:
-        data = response.json()
-        print(data)
-    except requests.exceptions.RequestException:
-        print(response.text)
+
+class ProcessContextManager:
+    def __init__(self, process, seconds=0, outhandler=None):
+        self.seconds = seconds
+        self.process = process
+        self.outhandler = outhandler
+        self.signal = TimeoutSignaller(self.seconds, self.signal_handler)
+
+    def __enter__(self):
+        self.signal.start()
+        return self.process
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print('stop processing -------------------')
+        self.signal.stop_run()
+        self.process
+
+    def signal_handler(self):
+        # Make process terminate however you like
+        # using self.process reference
+        if self.outhandler:
+            self.outhandler()
+        self.__exit__(exc_type=None, exc_val=None, exc_tb=None)
+        # raise Exception('hello world ')
+        # raise TimeoutProcessingError(limit=self.limit)
+
+
+DEFAULT_TIMEOUT_MESSAGE = os.strerror(errno.ETIME)
+
+
+class timeout(contextlib.ContextDecorator):
+    def __init__(self, seconds, *, timeout_message=DEFAULT_TIMEOUT_MESSAGE, suppress_timeout_errors=False):
+        self.seconds = int(seconds)
+        self.timeout_message = timeout_message
+        self.suppress = bool(suppress_timeout_errors)
+
+    def _timeout_handler(self, signum, frame):
+        raise TimeoutError(self.timeout_message)
+
+    def __enter__(self):
+        signal.signal(signal.SIGALRM, self._timeout_handler)
+        signal.alarm(self.seconds)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        signal.alarm(0)
+        if self.suppress and exc_type is TimeoutError:
+            return True
+
+
+def fun_while():
+    while True:
+        time.sleep(1)
+        print('time ', time.time())
+
 
 if __name__ == '__main__':
     # func()
-    import requests
-    data = {
-        'name_organization': 'Гречка3',
-        'train_number': 2,
-        'date': '2021-12-03',
-    }
-    import os
-    path_img = 'photo_2021-12-03_12-57-48.thumbnail.jpg'
-    path_img2 = 'photo_2021-12-03_12-57-48.thumbnail2.jpg'
-    url = 'http://127.0.0.1:8000/api/test/'
-    with open(path_img, 'rb') as img:
+    temp = 'initial'
 
-        with open(path_img2, 'rb') as img2:
-            name_img2 = os.path.basename(path_img2)
-            name_img = os.path.basename(path_img)
-            files = {'carriage_photo': (name_img, img, 'multipart/form-data', {'Expires': '0'}),
-                     'carriage_quality_photo': (name_img2, img2, 'multipart/form-data', {'Expires': '0'}),
-                     }
-            # data = {"cargo_weight": "5",
-            #                   "carriage_number": "15",
-            #                   "carriage_type": "2",
-            #                   "quality_control": 80,
-            #                   "train": "2",
-            #                   }
-            data = {
-                'carriage': "1",
-            }
-            with requests.Session() as s:
-                r = s.post(url, files=files, data=data)
-                print(r.status_code)
-    # data = {
-    #     'name_organization': 'Гречка3',
-    #     'train_number': 2,
-    #     'date': '2021-12-03',
-    # }
-    # response = requests.post('http://127.0.0.1:8000/api/trains/', data=data)
+    try:
+        with ProcessContextManager(process=fun_while, seconds=2) as p:
+            # do stuff e.g.
+            # time.sleep(20)
+            p()
+    except Exception as e:
+        temp = e
+    print('temp enter', temp)
+    data = {}
     print('hello')
